@@ -225,6 +225,14 @@
             background: #218838;
         }
 
+        .btn-scan {
+            background: #17a2b8;
+        }
+
+        .btn-scan:hover {
+            background: #138496;
+        }
+
         .modal {
             display: none;
             position: fixed;
@@ -532,6 +540,10 @@
             overflow: hidden;
             margin-bottom: 20px;
             position: relative;
+            background: #333;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         
         #scanner-video {
@@ -1007,90 +1019,38 @@
             
             .bill-section {
                 min-width: 100%;
-            margin-bottom: 15px;
-            padding: 15px;
+            }
+            
+            .bill-qr-section {
+                padding: 10px;
+            }
+            
+            .bill-total {
+                font-size: 1.1rem;
+            }
+            
+            .modal-content {
+                padding: 15px;
+            }
+            
+            .bill-preview {
+                padding: 15px;
+            }
+            
+            .bill-card-actions {
+                flex-direction: column;
+            }
+            
+            .export-controls {
+                flex-direction: column;
+                gap: 10px;
+                align-items: flex-start;
+            }
+            
+            .scanner-controls {
+                flex-direction: column;
+            }
         }
-
-        .bill-section h3 {
-            font-size: 1.1rem;
-            margin-bottom: 10px;
-        }
-
-        .bill-section p {
-            font-size: 1rem;
-            margin-bottom: 8px;
-        }
-
-        .bill-readings {
-            margin-bottom: 20px;
-        }
-
-        .reading-group {
-            gap: 15px;
-        }
-
-        .reading-row {
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 5px;
-        }
-
-        .reading-values {
-            align-self: flex-end;
-        }
-
-        .bill-charges {
-            margin-bottom: 20px;
-        }
-
-        .bill-charge-item {
-            padding: 10px 0;
-        }
-
-        .bill-total {
-            font-size: 1.2rem;
-            padding: 15px 0;
-        }
-
-        .qr-container {
-            margin: 15px 0;
-        }
-
-        #paymentQR {
-            width: 160px;
-            height: 160px;
-        }
-
-        .barcode-container {
-            margin: 15px 0;
-        }
-
-        #billBarcode {
-            height: 70px;
-        }
-
-        .modal-content {
-            padding: 15px;
-        }
-
-        .bill-preview {
-            padding: 15px;
-        }
-
-        .bill-card-actions {
-            flex-direction: column;
-        }
-
-        .export-controls {
-            flex-direction: column;
-            gap: 10px;
-            align-items: flex-start;
-        }
-
-        .scanner-controls {
-            flex-direction: column;
-        }
-    }
     </style>
 </head>
 <body>
@@ -1197,7 +1157,7 @@
                         <i class="fas fa-camera" style="font-size: 3rem; margin-bottom: 15px;"></i>
                         <h3>Barcode Scanner</h3>
                         <p>Position barcode within the frame</p>
-                        <button id="startScannerBtn" class="btn" style="margin-top: 20px;">
+                        <button id="startScannerBtn" class="btn btn-scan" style="margin-top: 20px;">
                             <i class="fas fa-play"></i> Start Scanner
                         </button>
                     </div>
@@ -1576,6 +1536,8 @@
         const stopScannerBtn = document.getElementById('stopScannerBtn');
         const toggleCameraBtn = document.getElementById('toggleCameraBtn');
         const scanResult = document.getElementById('scan-result');
+        const scannerVideo = document.getElementById('scanner-video');
+        const scannerOverlay = document.getElementById('scannerOverlay');
         
         // Application settings and bill data
         let settings = JSON.parse(localStorage.getItem('rentSettings')) || {
@@ -2469,25 +2431,33 @@
         
         // Start barcode scanner
         function startScanner() {
-            // Get camera devices
+            // Show loading state
+            scanResult.innerHTML = '<p><i class="fas fa-spinner fa-spin"></i> Initializing scanner...</p>';
+            
+            // Initialize scanner
+            scanner = new Instascan.Scanner({ 
+                video: scannerVideo,
+                mirror: false,
+                backgroundScan: true,
+                scanPeriod: 5
+            });
+            
+            // Handle scan events
+            scanner.addListener('scan', function(content) {
+                handleBarcodeScan(content);
+            });
+            
+            // Get available cameras
             Instascan.Camera.getCameras().then(function(availableCameras) {
                 cameras = availableCameras;
                 if (cameras.length > 0) {
+                    // Use the first available camera
                     currentCamera = cameras[0];
                     
-                    scanner = new Instascan.Scanner({ 
-                        video: document.getElementById('scanner-video'),
-                        mirror: false,
-                        backgroundScan: true,
-                        scanPeriod: 5
-                    });
-                    
-                    scanner.addListener('scan', function(content) {
-                        handleBarcodeScan(content);
-                    });
-                    
+                    // Start the scanner
                     scanner.start(currentCamera).then(() => {
-                        document.getElementById('scannerOverlay').style.display = 'none';
+                        // Hide overlay and show controls
+                        scannerOverlay.style.display = 'none';
                         startScannerBtn.style.display = 'none';
                         stopScannerBtn.style.display = 'block';
                         toggleCameraBtn.style.display = cameras.length > 1 ? 'block' : 'none';
@@ -2511,7 +2481,7 @@
                 scanner.stop();
                 scanner = null;
             }
-            document.getElementById('scannerOverlay').style.display = 'flex';
+            scannerOverlay.style.display = 'flex';
             startScannerBtn.style.display = 'block';
             stopScannerBtn.style.display = 'none';
             toggleCameraBtn.style.display = 'none';
@@ -2527,8 +2497,14 @@
             currentCamera = cameras[nextIndex];
             
             if (scanner) {
-                stopScanner();
-                startScanner();
+                scanner.stop().then(() => {
+                    scanner.start(currentCamera).then(() => {
+                        scanResult.innerHTML = '<p>Switched camera. Scanning for barcodes...</p>';
+                    }).catch(e => {
+                        console.error('Camera switch error:', e);
+                        scanResult.innerHTML = `<div class="scan-error">Camera error: ${e.message}</div>`;
+                    });
+                });
             }
         }
         
