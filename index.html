@@ -1,0 +1,2609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rent Invoice Generator</title>
+    <meta name="theme-color" content="#28a745">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/instascan@1.0.0/dist/instascan.min.js"></script>
+    <style>
+        :root {
+            --bg-primary: #f8f8f8;
+            --text-primary: #000000;
+            --text-secondary: #555555;
+            --accent-blue: #28a745;
+            --border-color: #dddddd;
+            --scan-highlight: #00cc00;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Courier New', monospace;
+        }
+
+        body {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: white;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            position: relative;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            margin-bottom: 10px;
+            color: var(--text-primary);
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 1rem;
+            margin-bottom: 10px;
+        }
+
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            background: white;
+            border-radius: 5px;
+            overflow: hidden;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 12px 15px;
+            background: white;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .tab-btn.active {
+            color: var(--accent-blue);
+            background: #f0f7ff;
+            border-bottom: 2px solid var(--accent-blue);
+        }
+
+        .tab-content {
+            display: none;
+            background: white;
+            border-radius: 5px;
+            padding: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        input {
+            width: 100%;
+            padding: 10px;
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            color: var(--text-primary);
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 5px rgba(0,123,255,0.3);
+        }
+
+        .auto-fill {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f9f9f9;
+            border-radius: 5px;
+            border: 1px solid var(--border-color);
+        }
+
+        .auto-fill-item {
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .auto-fill-label {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            margin-bottom: 5px;
+        }
+
+        .auto-fill-value {
+            font-size: 1rem;
+            color: var(--text-primary);
+            padding: 8px;
+            background: white;
+            border-radius: 4px;
+            min-height: 38px;
+            border: 1px solid var(--border-color);
+        }
+
+        .edit-icon {
+            position: absolute;
+            right: 10px;
+            top: 30px;
+            color: var(--accent-blue);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .edit-icon:hover {
+            transform: scale(1.1);
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 8px;
+            padding: 12px 20px;
+            background: var(--accent-blue);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+
+        .btn:hover {
+            background: #0069d9;
+            transform: translateY(-2px);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+
+        .btn-new-bill {
+            background: #28a745;
+            margin-top: 10px;
+        }
+
+        .btn-new-bill:hover {
+            background: #218838;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 5px;
+            width: 100%;
+            max-width: 500px;
+            padding: 20px;
+            position: relative;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .close-modal {
+            position: absolute;
+            top: 0px;
+            right: 15px;
+            font-size: 3rem;
+            color: #555;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 10;
+        }
+
+        .close-modal:hover {
+            color: #000;
+        }
+
+        .bill-preview {
+            background: white;
+            color: #000;
+            border-radius: 4px;
+            padding: 15px;
+            margin-bottom: 20px;
+            max-width: 100%;
+            overflow: hidden;
+            position: relative;
+            border: 1px solid var(--border-color);
+        }
+
+        .bill-header {
+            text-align: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px dashed var(--border-color);
+        }
+
+        .bill-title {
+            font-size: 1.3rem;
+            margin-bottom: 8px;
+        }
+
+        .bill-date {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .bill-status {
+            margin-top: 8px;
+            padding: 5px 10px;
+            border-radius: 3px;
+            font-weight: bold;
+            display: inline-block;
+            font-size: 0.9rem;
+        }
+        
+        .status-paid {
+            background-color: #28a745;
+            color: white;
+        }
+        
+        .status-pending {
+            background-color: #ffc107;
+            color: #000;
+        }
+
+        .bill-details {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 15px;
+            font-size: 0.9rem;
+        }
+
+        .bill-section {
+            flex: 1;
+            min-width: 180px;
+            background: #f9f9f9;
+            padding: 10px;
+            border-radius: 4px;
+            border-left: 2px solid var(--accent-blue);
+        }
+
+        .bill-section h3 {
+            margin-bottom: 8px;
+            font-size: 1rem;
+        }
+
+        .bill-section p {
+            margin: 10px 0;
+            color: #555;
+            font-size: 0.9rem;
+            margin-bottom: 0 !important;
+        }
+
+        .bill-readings {
+            margin-bottom: 15px;
+            background: #f9f9f9;
+            padding: 10px;
+            border-radius: 4px;
+            border-left: 2px solid var(--accent-blue);
+            font-size: 0.9rem;
+        }
+        
+        .reading-group {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .reading-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 0;
+            margin-bottom: 1px !important;
+        }
+        
+        .reading-type {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 500;
+        }
+        
+        .reading-values {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 600;
+        }
+        
+        .reading-values i {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .bill-charges {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 8px;
+            margin-bottom: 10px;
+            background: #f9f9f9;
+            padding: 12px;
+            border-radius: 4px;
+            border-left: 2px solid var(--accent-blue);
+            font-size: 0.9rem;
+        }
+        
+        .bill-charge-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px dashed var(--border-color);
+        }
+
+        .bill-charge-label {
+            font-weight: 500;
+        }
+        
+        .bill-charge-service {
+            margin-bottom: 2px;
+        }
+        
+        .bill-charge-details {
+            font-size: 0.85rem;
+            color: #777;
+            margin-left: 5px;
+        }
+
+        .bill-charge-value {
+            font-weight: 600;
+            min-width: 60px;
+            text-align: right;
+        }
+
+        .bill-total {
+            display: flex;
+            justify-content: space-between;
+            font-size: 1.1rem;
+            font-weight: bold;
+            padding: 12px 0;
+            border-top: 1px dashed var(--border-color);
+            margin-top: 8px;
+            background: #28a745;
+            border-radius: 4px;
+            padding: 10px;
+        }
+        
+        /* QR Code Section */
+        .bill-qr-section {
+            margin-top: 15px;
+            text-align: center;
+            padding: 10px 0;
+            background: #f9f9f9;
+            border-radius: 4px;
+            border-top: 1px dashed var(--border-color);
+        }
+        
+        .qr-container {
+            display: flex;
+            justify-content: center;
+            margin: 10px 0;
+        }
+        
+        #paymentQR {
+            width: 140px;
+            height: 140px;
+            background: white;
+            padding: 5px;
+            border-radius: 4px;
+            border: 1px solid #e0e0e0;
+        }
+        
+        .upi-details {
+            font-size: 0.9rem;
+            margin-top: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .upi-id {
+            font-weight: 600;
+            background: #f0f7ff;
+            padding: 6px 10px;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+        
+        .payment-note {
+            font-size: 0.8rem;
+            color: #777;
+            margin-top: 4px;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        
+        /* Barcode section styles */
+        .barcode-section {
+            margin-top: 15px;
+            text-align: center;
+            padding: 10px 0;
+            background: #f9f9f9;
+            border-radius: 4px;
+            border-top: 1px dashed var(--border-color);
+        }
+        
+        .barcode-container {
+            display: flex;
+            justify-content: center;
+            margin: 10px 0;
+        }
+        
+        #billBarcode {
+            height: 60px;
+            background: white;
+            padding: 5px;
+            border-radius: 4px;
+            border: 1px solid #e0e0e0;
+        }
+        
+        /* Scanner section */
+        .scan-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 20px;
+        }
+        
+        #scanner-container {
+            width: 100%;
+            max-width: 500px;
+            height: 300px;
+            border: 2px solid var(--border-color);
+            border-radius: 5px;
+            overflow: hidden;
+            margin-bottom: 20px;
+            position: relative;
+        }
+        
+        #scanner-video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .scan-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            color: white;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .scan-result {
+            padding: 15px;
+            background: white;
+            border-radius: 5px;
+            margin-top: 20px;
+            width: 100%;
+            max-width: 500px;
+            text-align: center;
+            border: 1px solid var(--border-color);
+        }
+        
+        .scan-success {
+            background-color: #28a745;
+            color: white;
+            padding: 15px;
+            border-radius: 4px;
+        }
+        
+        .scan-error {
+            background-color: #dc3545;
+            color: white;
+            padding: 15px;
+            border-radius: 4px;
+        }
+        
+        .scanner-controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        /* Thermal barcode style */
+        .thermal-barcode {
+            margin-top: 5mm;
+            text-align: center;
+        }
+        
+        #thermalBarcode {
+            height: 20mm;
+        }
+
+        /* Scanner frame animation */
+        .scanner-frame {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 70%;
+            height: 40%;
+            border: 3px solid var(--scan-highlight);
+            box-shadow: 0 0 20px var(--scan-highlight);
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 0.7; }
+            50% { opacity: 1; }
+            100% { opacity: 0.7; }
+        }
+        
+        .scan-guide {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80%;
+            text-align: center;
+            color: white;
+            font-size: 1.2rem;
+            font-weight: bold;
+            text-shadow: 0 0 5px rgba(0,0,0,0.7);
+            z-index: 10;
+        }
+
+        /* Print styles for thermal bill */
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            #thermal-bill, #thermal-bill * {
+                visibility: visible;
+            }
+            #thermal-bill {
+                position: absolute;
+                left: 30%;
+                top: 0;
+                width: 80mm;
+                padding: 5mm;
+                margin: 0;
+                font-family: 'Courier New', monospace;
+                font-size: 10pt;
+                background: white;
+                color: black;
+                display: block !important;
+            }
+            .thermal-header {
+                text-align: center;
+                margin-bottom: 5mm;
+                padding-bottom: 2mm;
+                border-bottom: 1px dashed #000;
+            }
+            .thermal-title {
+                font-size: 12pt;
+                font-weight: bold;
+                margin-bottom: 2mm;
+            }
+            .thermal-date {
+                font-size: 9pt;
+            }
+            .thermal-status {
+                font-weight: bold;
+                margin-top: 2mm;
+                text-align: center;
+            }
+            .thermal-section {
+                margin-bottom: 3mm;
+            }
+            .thermal-section-title {
+                font-weight: bold;
+                margin-bottom: 1mm;
+                border-bottom: 1px solid #000;
+            }
+            .thermal-row {
+                display: flex;
+                justify-content: space-between;
+                margin-bottom: 1mm;
+            }
+            .thermal-label {
+                flex: 1;
+            }
+            .thermal-value {
+                flex: 1;
+                text-align: right;
+            }
+            .thermal-qr-container {
+                text-align: center;
+                margin: 3mm 0;
+            }
+            .thermal-qr {
+                width: 35mm;
+                height: 35mm;
+                margin: 0 auto;
+            }
+            .thermal-note {
+                text-align: center;
+                font-size: 8pt;
+                margin-top: 2mm;
+            }
+            .thermal-total {
+                font-weight: bold;
+                margin-top: 3mm;
+                padding-top: 2mm;
+                border-top: 1px dashed #000;
+                text-align: right;
+            }
+            .no-print {
+                display: none;
+            }
+        }
+        
+        /* PDF Export Controls */
+        .export-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: #f9f9f9;
+            border-radius: 5px;
+            border: 1px solid var(--border-color);
+        }
+        
+        .select-all {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .bill-card-checkbox {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+        }
+        
+        /* PDF Loading Modal */
+        .pdf-loading {
+            text-align: center;
+            padding: 30px;
+        }
+        
+        .pdf-progress {
+            width: 100%;
+            height: 10px;
+            background: #e0e0e0;
+            border-radius: 5px;
+            margin: 20px 0;
+            overflow: hidden;
+        }
+        
+        .pdf-progress-bar {
+            height: 100%;
+            background: var(--accent-blue);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        /* Bill card styles */
+        .bill-card {
+            background: white;
+            border-radius: 5px;
+            padding: 15px;
+            border: 1px solid var(--border-color);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        .bill-card:hover {
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            border-color: var(--accent-blue);
+        }
+
+        .bill-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .bill-card-date {
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .bill-card-total {
+            font-size: 1.1rem;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .bill-card-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 10px;
+            font-size: 0.9rem;
+        }
+
+        .bill-card-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .bill-card-label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 2px;
+        }
+
+        .bill-card-value {
+            font-size: 0.95rem;
+        }
+        
+        .bill-card-status {
+            margin-top: 8px;
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-weight: bold;
+            text-align: center;
+            align-self: flex-start;
+            font-size: 0.85rem;
+        }
+        
+        .bill-card-paid {
+            background-color: #28a745;
+            color: white;
+        }
+        
+        .bill-card-pending {
+            background-color: #ffc107;
+            color: #000;
+        }
+        
+        .bill-card-payment-date {
+            font-size: 0.8rem;
+            color: #28a745;
+            margin-top: 4px;
+        }
+        
+        .bill-card-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+        }
+        
+        .bill-action-btn {
+            flex: 1;
+            padding: 6px 10px;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            transition: all 0.3s ease;
+            font-size: 0.85rem;
+        }
+        
+        .edit-btn {
+            background: rgba(0,123,255,0.1);
+            color: var(--accent-blue);
+        }
+        
+        .delete-btn {
+            background: rgba(220,53,69,0.1);
+            color: #dc3545;
+        }
+        
+        .bill-action-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .no-bills {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 30px;
+            color: var(--text-secondary);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .no-bills i {
+            font-size: 2.5rem;
+            color: #6c757d;
+        }
+        
+        .settings-form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .settings-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+        
+        .settings-section {
+            padding: 15px;
+            background: #f9f9f9;
+            border-radius: 5px;
+            border: 1px solid var(--border-color);
+        }
+        
+        .settings-section h3 {
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 1.1rem;
+        }
+        
+        .settings-form label {
+            display: block;
+            margin-bottom: 6px;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+        
+        .settings-form input {
+            padding: 10px;
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            color: var(--text-primary);
+            width: 100%;
+            font-size: 0.95rem;
+        }
+        
+        .settings-form input:focus {
+            border-color: var(--accent-blue);
+        }
+
+        .download-info {
+            text-align: center;
+            padding: 10px;
+            background: #f0f7ff;
+            border-radius: 4px;
+            margin-top: 8px;
+            border: 1px solid var(--accent-blue);
+            font-size: 0.9rem;
+        }
+        
+        /* PDF Bill Preview */
+        .pdf-bill-preview {
+            width: 100%;
+            max-width: 700px;
+            margin: 0 auto;
+            padding: 20px;
+            background: white;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        /* PDF-specific styles */
+        .pdf-page {
+            width: 210mm;
+            height: 297mm;
+            padding: 20mm;
+            background: white;
+            box-shadow: 0 0 5px rgba(0,0,0,0.1);
+            position: absolute;
+            left: -9999px;
+        }
+
+        @media (max-width: 768px) {
+            .settings-group {
+                grid-template-columns: 1fr;
+            }
+            
+            .modal-buttons {
+                grid-template-columns: 1fr;
+            }
+            
+            #previousBillsList {
+                grid-template-columns: 1fr;
+            }
+            
+            .tabs {
+                flex-direction: column;
+            }
+            
+            .bill-charges {
+                grid-template-columns: 1fr;
+            }
+            
+            .bill-section {
+                min-width: 100%;
+            margin-bottom: 15px;
+            padding: 15px;
+        }
+
+        .bill-section h3 {
+            font-size: 1.1rem;
+            margin-bottom: 10px;
+        }
+
+        .bill-section p {
+            font-size: 1rem;
+            margin-bottom: 8px;
+        }
+
+        .bill-readings {
+            margin-bottom: 20px;
+        }
+
+        .reading-group {
+            gap: 15px;
+        }
+
+        .reading-row {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 5px;
+        }
+
+        .reading-values {
+            align-self: flex-end;
+        }
+
+        .bill-charges {
+            margin-bottom: 20px;
+        }
+
+        .bill-charge-item {
+            padding: 10px 0;
+        }
+
+        .bill-total {
+            font-size: 1.2rem;
+            padding: 15px 0;
+        }
+
+        .qr-container {
+            margin: 15px 0;
+        }
+
+        #paymentQR {
+            width: 160px;
+            height: 160px;
+        }
+
+        .barcode-container {
+            margin: 15px 0;
+        }
+
+        #billBarcode {
+            height: 70px;
+        }
+
+        .modal-content {
+            padding: 15px;
+        }
+
+        .bill-preview {
+            padding: 15px;
+        }
+
+        .bill-card-actions {
+            flex-direction: column;
+        }
+
+        .export-controls {
+            flex-direction: column;
+            gap: 10px;
+            align-items: flex-start;
+        }
+
+        .scanner-controls {
+            flex-direction: column;
+        }
+    }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-file-invoice-dollar"></i> Rent & Utilities Invoice Generator</h1>
+            <div class="subtitle">For House Owner - Mr. Shankar Debnath</div>
+            <div class="header-actions">
+                <button class="btn btn-secondary" id="settingsBtn">
+                    <i class="fas fa-cog"></i> Settings
+                </button>
+            </div>
+        </header>
+        
+        <div class="tabs">
+            <button class="tab-btn active" data-tab="newBill">
+                <i class="fas fa-plus-circle"></i> New Bill
+            </button>
+            <button class="tab-btn" data-tab="previousBills">
+                <i class="fas fa-history"></i> Previous Bills
+            </button>
+            <button class="tab-btn" data-tab="scanBill">
+                <i class="fas fa-camera"></i> Scan Bill
+            </button>
+        </div>
+        
+        <div id="newBill" class="tab-content active">
+            <div class="auto-fill">
+                <div class="auto-fill-item">
+                    <div class="auto-fill-label">
+                        <i class="fas fa-calendar-alt"></i> Date & Time
+                    </div>
+                    <div id="currentDateTime" class="auto-fill-value"></div>
+                </div>
+                <div class="auto-fill-item">
+                    <div class="auto-fill-label">
+                        <i class="fas fa-bolt"></i> Previous Electricity Reading
+                    </div>
+                    <div id="prevElectricity" class="auto-fill-value">5265</div>
+                    <i class="fas fa-edit edit-icon" id="editElectricity"></i>
+                </div>
+                <div class="auto-fill-item">
+                    <div class="auto-fill-label">
+                        <i class="fas fa-snowflake"></i> Previous AC Reading
+                    </div>
+                    <div id="prevAC" class="auto-fill-value">1018</div>
+                    <i class="fas fa-edit edit-icon" id="editAC"></i>
+                </div>
+            </div>
+            
+            <form id="billForm">
+                <div class="form-group">
+                    <label for="electricityReading">
+                        <i class="fas fa-bolt"></i> Current Electricity Reading
+                    </label>
+                    <input type="number" id="electricityReading" required min="5265" placeholder="Enter current reading">
+                </div>
+                
+                <div class="form-group">
+                    <label for="acReading">
+                        <i class="fas fa-snowflake"></i> Current AC Reading
+                    </label>
+                    <input type="number" id="acReading" required min="1018" placeholder="Enter current reading">
+                </div>
+                
+                <button type="submit" class="btn">
+                    <i class="fas fa-calculator"></i> Generate Bill
+                </button>
+                
+                <button type="button" id="formNewBillBtn" class="btn btn-new-bill">
+                    <i class="fas fa-file"></i> New Bill (Reset Form)
+                </button>
+            </form>
+        </div>
+        
+        <div id="previousBills" class="tab-content">
+            <div class="export-controls">
+                <div class="select-all">
+                    <input type="checkbox" id="selectAllBills">
+                    <label for="selectAllBills">Select All</label>
+                </div>
+                <button id="exportPdfBtn" class="btn">
+                    <i class="fas fa-file-pdf"></i> Export Selected to PDF
+                </button>
+            </div>
+            
+            <h2 style="margin-bottom: 15px;"><i class="fas fa-history"></i> Previous Bills</h2>
+            <div id="previousBillsList">
+                <div class="no-bills">
+                    <i class="fas fa-file-invoice"></i>
+                    <p>No bills generated yet</p>
+                </div>
+            </div>
+        </div>
+        
+        <div id="scanBill" class="tab-content">
+            <h2 style="margin-bottom: 15px;"><i class="fas fa-camera"></i> Bill Scanner</h2>
+            <p style="text-align: center; margin-bottom: 20px;">Scan bill barcode to validate and mark as paid</p>
+            
+            <div class="scan-section">
+                <div id="scanner-container">
+                    <video id="scanner-video"></video>
+                    <div class="scan-overlay" id="scannerOverlay">
+                        <i class="fas fa-camera" style="font-size: 3rem; margin-bottom: 15px;"></i>
+                        <h3>Barcode Scanner</h3>
+                        <p>Position barcode within the frame</p>
+                        <button id="startScannerBtn" class="btn" style="margin-top: 20px;">
+                            <i class="fas fa-play"></i> Start Scanner
+                        </button>
+                    </div>
+                    <div class="scanner-frame"></div>
+                    <div class="scan-guide">Align barcode within this frame</div>
+                </div>
+                
+                <div class="scanner-controls">
+                    <button id="toggleCameraBtn" class="btn btn-secondary" style="display: none;">
+                        <i class="fas fa-sync-alt"></i> Switch Camera
+                    </button>
+                    <button id="stopScannerBtn" class="btn btn-secondary" style="display: none;">
+                        <i class="fas fa-stop"></i> Stop Scanner
+                    </button>
+                </div>
+                
+                <div id="scan-result" class="scan-result">
+                    <p>Scanner is ready. Click "Start Scanner" to begin.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Bill Preview Modal -->
+    <div id="billModal" class="modal">
+        <div class="modal-content">
+            <h2 style="margin-bottom: 15px;"><i class="fas fa-file-invoice"></i> Invoice Preview</h2>
+            <span class="close-modal">&times;</span>
+            
+            <div class="bill-preview" id="billPreview">
+                <div class="bill-header">
+                    <h2 class="bill-title">
+                        <i class="fas fa-file-invoice"></i> Rent & Utilities Invoice</h2>
+                    <div class="bill-date">
+                        <i class="fas fa-calendar-alt"></i> <span id="billDate"></span>
+                    </div>
+                    <div class="bill-status status-pending" id="billStatus">Pending</div>
+                </div>
+                
+                <div class="bill-details">
+                    <div class="bill-section">
+                        <h3><i class="fas fa-home"></i> Owner Information</h3>
+                        <p><i class="fas fa-user"></i> <span id="ownerName">Mr. Shankar Debnath</span></p>
+                        <p><i class="fas fa-phone"></i> <span id="ownerPhone">+91 9903403883</span></p>
+                    </div>
+                    
+                    <div class="bill-section">
+                        <h3><i class="fas fa-user"></i> Tenant Information</h3>
+                        <p><i class="fas fa-user"></i> <span id="tenantName">Mr. Atul Rai</span></p>
+                        <p><i class="fas fa-phone"></i> <span id="tenantPhone">+91 8777035859</span></p>
+                    </div>
+                </div>
+                
+                <div class="bill-readings">
+                    <h3><i class="fas fa-tachometer-alt" style="margin-bottom: 15px !important;"></i> Meter Reading Changes</h3>
+                    
+                    <div class="reading-group">
+                        <div class="reading-row">
+                            <div class="reading-type">
+                                <i class="fas fa-bolt" style="color: var(--text-secondary) !important;"></i> Electricity
+                            </div>
+                            <div class="reading-values">
+                                <span id="prevElecBill">5265</span>
+                                <i class="fas fa-arrow-right"></i>
+                                <span id="currElecBill">-</span>
+                            </div>
+                        </div>
+                        
+                        <div class="reading-row">
+                            <div class="reading-type">
+                                <i class="fas fa-snowflake" style="color: var(--text-secondary) !important;"></i> AC
+                            </div>
+                            <div class="reading-values">
+                                <span id="prevACBill">1018</span>
+                                <i class="fas fa-arrow-right"></i>
+                                <span id="currACBill">-</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bill-charges">
+                   <h3><i class="fas fa-file-alt"></i> Bill Breakup Details</h3>
+                    <div class="bill-charge-item">
+                        <div class="bill-charge-label">
+                            <div class="bill-charge-service">
+                                <i class="fas fa-home"></i> Rent</div>
+                        </div>
+                        <div class="bill-charge-value">₹<span id="rentAmount">4944</span></div>
+                    </div>
+                    <div class="bill-charge-item">
+                        <div class="bill-charge-label">
+                            <div class="bill-charge-service">
+                                <i class="fas fa-tint"></i> Water</div>
+                        </div>
+                        <div class="bill-charge-value">₹<span id="waterAmount">150</span></div>
+                    </div>
+                    <div class="bill-charge-item">
+                        <div class="bill-charge-label">
+                            <div class="bill-charge-service">
+                                <i class="fas fa-bolt"></i> Electricity
+                            </div>
+                            <div class="bill-charge-details">
+                                (<span id="elecUnits">0</span> units × ₹<span id="elecRate">10</span>)
+                            </div>
+                        </div>
+                        <div class="bill-charge-value">₹<span id="elecCharge">0</span></div>
+                    </div>
+                    <div class="bill-charge-item">
+                        <div class="bill-charge-label">
+                            <div class="bill-charge-service">
+                                <i class="fas fa-snowflake"></i> AC
+                            </div>
+                            <div class="bill-charge-details">
+                                (<span id="acUnits">0</span> units × ₹<span id="acRate">13</span>)
+                            </div>
+                        </div>
+                        <div class="bill-charge-value">₹<span id="acCharge">0</span></div>
+                    </div>
+                
+                <div class="bill-total">
+                    <span><i class="fas fa-receipt"></i> Total Amount:</span>
+                    <span>₹<span id="totalAmount">0</span></span>
+                </div>
+                </div>
+                
+                <!-- QR Code Payment Section -->
+                <div class="bill-qr-section">
+                    <h3><i class="fas fa-qrcode"></i> Pay with UPI</h3>
+                    <div class="qr-container">
+                        <canvas id="paymentQR"></canvas>
+                    </div>
+                    <div class="payment-note">
+                        <i class="fas fa-info-circle"></i> Scan the QR code to pay instantly via any UPI app
+                    </div>
+                </div>
+                
+                <!-- Barcode Section -->
+                <div class="barcode-section">
+                    <h3><i class="fas fa-barcode"></i> Bill Validation Code</h3>
+                    <div class="barcode-container">
+                        <svg id="billBarcode"></svg>
+                    </div>
+                    <div class="payment-note">
+                        <i class="fas fa-info-circle"></i> Scan this barcode to validate payment
+                    </div>
+                </div>
+            </div>
+            
+            <div class="modal-buttons">
+                <button id="shareBtn" class="btn">
+                    <i class="fab fa-whatsapp"></i> Share via WhatsApp
+                </button>
+                <button id="markPaidBtn" class="btn btn-new-bill">
+                    <i class="fas fa-check-circle"></i> Mark as Paid
+                </button>
+                <button id="thermalPrintBtn" class="btn btn-secondary">
+                    <i class="fas fa-print"></i> Print Thermal Bill
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h2 style="margin-bottom: 15px;"><i class="fas fa-cog"></i> Application Settings</h2>
+            
+            <form id="settingsForm" class="settings-form">
+                <div class="settings-section">
+                    <h3><i class="fas fa-user-tie"></i> Owner Details</h3>
+                    <div class="form-group">
+                        <label for="ownerNameSetting">Owner Name</label>
+                        <input type="text" id="ownerNameSetting" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="ownerPhoneSetting">Owner Phone</label>
+                        <input type="tel" id="ownerPhoneSetting" required>
+                    </div>
+                </div>
+                
+                <div class="settings-section">
+                    <h3><i class="fas fa-user"></i> Tenant Details</h3>
+                    <div class="form-group">
+                        <label for="tenantNameSetting">Tenant Name</label>
+                        <input type="text" id="tenantNameSetting" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="tenantPhoneSetting">Tenant Phone</label>
+                        <input type="tel" id="tenantPhoneSetting" required>
+                    </div>
+                </div>
+                
+                <div class="settings-section">
+                    <h3><i class="fas fa-money-bill-wave"></i> Bill Charges</h3>
+                    <div class="settings-group">
+                        <div class="form-group">
+                            <label for="rentAmountSetting">Rent Amount (₹)</label>
+                            <input type="number" id="rentAmountSetting" min="0" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="waterAmountSetting">Water Amount (₹)</label>
+                            <input type="number" id="waterAmountSetting" min="0" required>
+                        </div>
+                    </div>
+                    <div class="settings-group">
+                        <div class="form-group">
+                            <label for="electricityRateSetting">Electricity Rate (₹/unit)</label>
+                            <input type="number" id="electricityRateSetting" min="0" step="0.01" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="acRateSetting">AC Rate (₹/unit)</label>
+                            <input type="number" id="acRateSetting" min="0" step="0.01" required>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="settings-section">
+                    <h3><i class="fas fa-qrcode"></i> UPI Settings</h3>
+                    <div class="form-group">
+                        <label for="upiIdSetting">UPI ID</label>
+                        <input type="text" id="upiIdSetting" required value="debnathshankar.1971-1@okaxis">
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn">
+                    <i class="fas fa-save"></i> Save Settings
+                </button>
+            </form>
+        </div>
+    </div>
+    
+    <!-- PDF Loading Modal -->
+    <div id="pdfLoadingModal" class="modal">
+        <div class="modal-content">
+            <div class="pdf-loading">
+                <h2><i class="fas fa-file-pdf"></i> Generating PDF</h2>
+                <p>Please wait while we prepare your document...</p>
+                <div class="pdf-progress">
+                    <div class="pdf-progress-bar" id="pdfProgressBar"></div>
+                </div>
+                <p id="pdfStatus">Processing bill 1 of 1</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Thermal Bill (Hidden until printed) -->
+    <div id="thermal-bill" class="no-print" style="display: none; width: 80mm; padding: 5mm; font-family: 'Courier New', monospace; background: white; color: black; margin: 0 auto;">
+        <div class="thermal-header">
+            <div class="thermal-title">RENT & UTILITIES BILL</div>
+            <div class="thermal-date" id="thermalDate"></div>
+            <div class="thermal-status" id="thermalStatus"></div>
+        </div>
+        
+        <div class="thermal-section">
+            <div class="thermal-section-title">OWNER DETAILS</div>
+            <div class="thermal-row">
+                <div class="thermal-label">Name:</div>
+                <div class="thermal-value" id="thermalOwnerName"></div>
+            </div>
+            <div class="thermal-row">
+                <div class="thermal-label">Phone:</div>
+                <div class="thermal-value" id="thermalOwnerPhone"></div>
+            </div>
+        </div>
+        
+        <div class="thermal-section">
+            <div class="thermal-section-title">TENANT DETAILS</div>
+            <div class="thermal-row">
+                <div class="thermal-label">Name:</div>
+                <div class="thermal-value" id="thermalTenantName"></div>
+            </div>
+            <div class="thermal-row">
+                <div class="thermal-label">Phone:</div>
+                <div class="thermal-value" id="thermalTenantPhone"></div>
+            </div>
+        </div>
+        
+        <div class="thermal-section">
+            <div class="thermal-section-title">METER READINGS</div>
+            <div class="thermal-row">
+                <div class="thermal-label">Elec Prev:</div>
+                <div class="thermal-value" id="thermalPrevElec"></div>
+            </div>
+            <div class="thermal-row">
+                <div class="thermal-label">Elec Curr:</div>
+                <div class="thermal-value" id="thermalCurrElec"></div>
+            </div>
+            <div class="thermal-row">
+                <div class="thermal-label">AC Prev:</div>
+                <div class="thermal-value" id="thermalPrevAC"></div>
+            </div>
+            <div class="thermal-row">
+                <div class="thermal-label">AC Curr:</div>
+                <div class="thermal-value" id="thermalCurrAC"></div>
+            </div>
+        </div>
+        
+        <div class="thermal-section">
+            <div class="thermal-section-title">BILL DETAILS</div>
+            <div class="thermal-row">
+                <div class="thermal-label">Rent:</div>
+                <div class="thermal-value" id="thermalRent"></div>
+            </div>
+            <div class="thermal-row">
+                <div class="thermal-label">Water:</div>
+                <div class="thermal-value" id="thermalWater"></div>
+            </div>
+            <div class="thermal-row">
+                <div class="thermal-label">Electricity:</div>
+                <div class="thermal-value" id="thermalElecCharge"></div>
+            </div>
+            <div class="thermal-row">
+                <div class="thermal-label">AC:</div>
+                <div class="thermal-value" id="thermalACCharge"></div>
+            </div>
+            
+            <div class="thermal-total">
+                <div class="thermal-label">TOTAL:</div>
+                <div class="thermal-value" id="thermalTotal"></div>
+            </div>
+        </div>
+        
+        <div class="thermal-section">
+            <div class="thermal-section-title">PAYMENT</div>
+            <div class="thermal-qr-container">
+                <canvas id="thermalQR" class="thermal-qr"></canvas>
+            </div>
+            <div class="thermal-row">
+                <div class="thermal-label"></div>
+                <div class="thermal-value" id="thermalUPI"></div>
+            </div>
+            <div class="thermal-note">Scan QR to pay via UPI</div>
+        </div>
+        
+        <div class="thermal-section">
+            <div class="thermal-section-title">VALIDATION</div>
+            <div class="thermal-barcode">
+                <svg id="thermalBarcode"></svg>
+            </div>
+            <div class="thermal-note">Scan barcode to validate payment</div>
+        </div>
+    </div>
+    
+    <!-- PDF Page Template (Hidden) -->
+    <div id="pdf-template" style="display: none;">
+        <div class="pdf-page">
+            <!-- Content will be inserted here -->
+        </div>
+    </div>
+
+    <script>
+        // DOM Elements
+        const tabBtns = document.querySelectorAll('.tab-btn');
+        const tabContents = document.querySelectorAll('.tab-content');
+        const billForm = document.getElementById('billForm');
+        const billModal = document.getElementById('billModal');
+        const settingsModal = document.getElementById('settingsModal');
+        const pdfLoadingModal = document.getElementById('pdfLoadingModal');
+        const closeModal = document.querySelectorAll('.close-modal');
+        const shareBtn = document.getElementById('shareBtn');
+        const markPaidBtn = document.getElementById('markPaidBtn');
+        const thermalPrintBtn = document.getElementById('thermalPrintBtn');
+        const prevBillsList = document.getElementById('previousBillsList');
+        const editElectricityBtn = document.getElementById('editElectricity');
+        const editACBtn = document.getElementById('editAC');
+        const formNewBillBtn = document.getElementById('formNewBillBtn');
+        const settingsBtn = document.getElementById('settingsBtn');
+        const settingsForm = document.getElementById('settingsForm');
+        const selectAllBills = document.getElementById('selectAllBills');
+        const exportPdfBtn = document.getElementById('exportPdfBtn');
+        const pdfProgressBar = document.getElementById('pdfProgressBar');
+        const pdfStatus = document.getElementById('pdfStatus');
+        const startScannerBtn = document.getElementById('startScannerBtn');
+        const stopScannerBtn = document.getElementById('stopScannerBtn');
+        const toggleCameraBtn = document.getElementById('toggleCameraBtn');
+        const scanResult = document.getElementById('scan-result');
+        
+        // Application settings and bill data
+        let settings = JSON.parse(localStorage.getItem('rentSettings')) || {
+            ownerName: "Mr. Shankar Debnath",
+            ownerPhone: "+91 9903403883",
+            tenantName: "Mr. Atul Rai",
+            tenantPhone: "+91 8777035859",
+            rentAmount: 4944,
+            waterAmount: 150,
+            electricityRate: 10,
+            acRate: 13,
+            upiId: "debnathshankar.1971-1@okaxis"
+        };
+        
+        let bills = JSON.parse(localStorage.getItem('rentBills')) || [];
+        let prevElectricity = 5265;
+        let prevAC = 1018;
+        let currentBill = null;
+        
+        // Barcode scanner variables
+        let scanner = null;
+        let currentCamera = null;
+        let cameras = [];
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            updateDateTime();
+            setInterval(updateDateTime, 60000); // Update time every minute
+            
+            // Set previous readings from localStorage if available
+            const storedPrev = JSON.parse(localStorage.getItem('previousReadings'));
+            if (storedPrev) {
+                prevElectricity = storedPrev.electricity;
+                prevAC = storedPrev.ac;
+                document.getElementById('prevElectricity').textContent = prevElectricity;
+                document.getElementById('prevAC').textContent = prevAC;
+            }
+            
+            // Load settings
+            loadSettings();
+            
+            // Load previous bills
+            loadPreviousBills();
+            
+            // Set up select all functionality
+            selectAllBills.addEventListener('change', function() {
+                const checkboxes = document.querySelectorAll('.bill-checkbox');
+                checkboxes.forEach(checkbox => {
+                    checkbox.checked = this.checked;
+                });
+            });
+            
+            // Export PDF button
+            exportPdfBtn.addEventListener('click', exportBillsToPDF);
+            
+            // Set up scanner button event listeners
+            startScannerBtn.addEventListener('click', startScanner);
+            stopScannerBtn.addEventListener('click', stopScanner);
+            toggleCameraBtn.addEventListener('click', toggleCamera);
+        });
+        
+        // Tab switching
+        tabBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tabId = btn.getAttribute('data-tab');
+                
+                // Update active tab button
+                tabBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                
+                // Show active tab content
+                tabContents.forEach(content => content.classList.remove('active'));
+                document.getElementById(tabId).classList.add('active');
+                
+                // Stop scanner when leaving scan tab
+                if (tabId !== 'scanBill' && scanner) {
+                    stopScanner();
+                }
+            });
+        });
+        
+        // Update date and time
+        function updateDateTime() {
+            const now = new Date();
+            const options = { 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            };
+            document.getElementById('currentDateTime').textContent = now.toLocaleDateString('en-IN', options);
+        }
+        
+        // Load settings to UI
+        function loadSettings() {
+            // Owner details
+            document.getElementById('ownerNameSetting').value = settings.ownerName;
+            document.getElementById('ownerPhoneSetting').value = settings.ownerPhone;
+            
+            // Tenant details
+            document.getElementById('tenantNameSetting').value = settings.tenantName;
+            document.getElementById('tenantPhoneSetting').value = settings.tenantPhone;
+            
+            // Charges
+            document.getElementById('rentAmountSetting').value = settings.rentAmount;
+            document.getElementById('waterAmountSetting').value = settings.waterAmount;
+            document.getElementById('electricityRateSetting').value = settings.electricityRate;
+            document.getElementById('acRateSetting').value = settings.acRate;
+            
+            // UPI ID
+            document.getElementById('upiIdSetting').value = settings.upiId;
+            
+            // Update UI elements
+            document.getElementById('ownerName').textContent = settings.ownerName;
+            document.getElementById('ownerPhone').textContent = settings.ownerPhone;
+            document.getElementById('tenantName').textContent = settings.tenantName;
+            document.getElementById('tenantPhone').textContent = settings.tenantPhone;
+            document.getElementById('rentAmount').textContent = settings.rentAmount;
+            document.getElementById('waterAmount').textContent = settings.waterAmount;
+            document.getElementById('elecRate').textContent = settings.electricityRate;
+            document.getElementById('acRate').textContent = settings.acRate;
+        }
+        
+        // Save settings
+        settingsForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Get settings values
+            settings.ownerName = document.getElementById('ownerNameSetting').value;
+            settings.ownerPhone = document.getElementById('ownerPhoneSetting').value;
+            settings.tenantName = document.getElementById('tenantNameSetting').value;
+            settings.tenantPhone = document.getElementById('tenantPhoneSetting').value;
+            settings.rentAmount = parseFloat(document.getElementById('rentAmountSetting').value);
+            settings.waterAmount = parseFloat(document.getElementById('waterAmountSetting').value);
+            settings.electricityRate = parseFloat(document.getElementById('electricityRateSetting').value);
+            settings.acRate = parseFloat(document.getElementById('acRateSetting').value);
+            settings.upiId = document.getElementById('upiIdSetting').value;
+            
+            // Save to localStorage
+            localStorage.setItem('rentSettings', JSON.stringify(settings));
+            
+            // Update UI
+            loadSettings();
+            
+            // Close modal
+            settingsModal.classList.remove('active');
+            
+            alert('Settings saved successfully!');
+        });
+        
+        // Open settings modal
+        settingsBtn.addEventListener('click', () => {
+            settingsModal.classList.add('active');
+        });
+        
+        // Close modals
+        closeModal.forEach(btn => {
+            btn.addEventListener('click', () => {
+                billModal.classList.remove('active');
+                settingsModal.classList.remove('active');
+                pdfLoadingModal.classList.remove('active');
+            });
+        });
+        
+        // Handle bill generation
+        billForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            generateBill();
+        });
+        
+        // Generate bill function
+        function generateBill() {
+            // Get input values
+            const currElectricity = parseInt(document.getElementById('electricityReading').value);
+            const currAC = parseInt(document.getElementById('acReading').value);
+            
+            // Validate inputs
+            if (currElectricity < prevElectricity) {
+                alert('Current electricity reading cannot be less than previous reading');
+                return;
+            }
+            
+            if (currAC < prevAC) {
+                alert('Current AC reading cannot be less than previous reading');
+                return;
+            }
+            
+            if (isNaN(currElectricity) || isNaN(currAC)) {
+                alert('Please enter valid readings');
+                return;
+            }
+            
+            // Calculate charges
+            const elecUnits = currElectricity - prevElectricity;
+            const elecCharge = elecUnits * settings.electricityRate;
+            const acUnits = currAC - prevAC;
+            const acCharge = acUnits * settings.acRate;
+            const total = settings.rentAmount + settings.waterAmount + elecCharge + acCharge;
+            
+            // Create bill object
+            const bill = {
+                id: Date.now(),
+                date: new Date().toISOString(),
+                prevElectricity,
+                currElectricity,
+                elecUnits,
+                elecCharge,
+                prevAC,
+                currAC,
+                acUnits,
+                acCharge,
+                rent: settings.rentAmount,
+                water: settings.waterAmount,
+                total,
+                status: 'pending',
+                paidDate: null
+            };
+            
+            // Add to bills array
+            bills.unshift(bill);
+            localStorage.setItem('rentBills', JSON.stringify(bills));
+            
+            // Update previous readings
+            prevElectricity = currElectricity;
+            prevAC = currAC;
+            localStorage.setItem('previousReadings', JSON.stringify({ electricity: prevElectricity, ac: prevAC }));
+            
+            // Update UI with new readings
+            document.getElementById('prevElectricity').textContent = prevElectricity;
+            document.getElementById('prevAC').textContent = prevAC;
+            
+            // Display the bill
+            displayBill(bill);
+            
+            // Reload previous bills
+            loadPreviousBills();
+        }
+        
+        // Edit previous electricity reading
+        editElectricityBtn.addEventListener('click', () => {
+            const newValue = prompt('Enter new previous electricity reading:', prevElectricity);
+            if (newValue && !isNaN(newValue)) {
+                prevElectricity = parseInt(newValue);
+                document.getElementById('prevElectricity').textContent = prevElectricity;
+                localStorage.setItem('previousReadings', JSON.stringify({ 
+                    electricity: prevElectricity, 
+                    ac: prevAC 
+                }));
+            }
+        });
+        
+        // Edit previous AC reading
+        editACBtn.addEventListener('click', () => {
+            const newValue = prompt('Enter new previous AC reading:', prevAC);
+            if (newValue && !isNaN(newValue)) {
+                prevAC = parseInt(newValue);
+                document.getElementById('prevAC').textContent = prevAC;
+                localStorage.setItem('previousReadings', JSON.stringify({ 
+                    electricity: prevElectricity, 
+                    ac: prevAC 
+                }));
+            }
+        });
+        
+        // Display bill in modal
+        function displayBill(bill) {
+            currentBill = bill;
+            
+            const date = new Date(bill.date);
+            const options = { 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            };
+            
+            // Populate bill details
+            document.getElementById('billDate').textContent = date.toLocaleDateString('en-IN', options);
+            document.getElementById('prevElecBill').textContent = bill.prevElectricity;
+            document.getElementById('currElecBill').textContent = bill.currElectricity;
+            document.getElementById('prevACBill').textContent = bill.prevAC;
+            document.getElementById('currACBill').textContent = bill.currAC;
+            document.getElementById('elecUnits').textContent = bill.elecUnits;
+            document.getElementById('elecCharge').textContent = bill.elecCharge.toFixed(2);
+            document.getElementById('acUnits').textContent = bill.acUnits;
+            document.getElementById('acCharge').textContent = bill.acCharge.toFixed(2);
+            document.getElementById('totalAmount').textContent = bill.total.toFixed(2);
+            
+            // Set status
+            const statusElement = document.getElementById('billStatus');
+            statusElement.textContent = bill.status.charAt(0).toUpperCase() + bill.status.slice(1);
+            statusElement.className = `bill-status status-${bill.status}`;
+            
+            // Update button text based on status
+            markPaidBtn.innerHTML = bill.status === 'pending' ? 
+                '<i class="fas fa-check-circle"></i> Mark as Paid' : 
+                '<i class="fas fa-undo"></i> Mark as Pending';
+                
+            markPaidBtn.className = bill.status === 'pending' ? 
+                'btn btn-new-bill' : 
+                'btn btn-secondary';
+            
+            // Generate payment QR code
+            generatePaymentQR(bill.total);
+            
+            // Generate barcode for bill ID
+            generateBarcode(bill.id);
+            
+            // Show modal
+            billModal.classList.add('active');
+        }
+        
+        // Generate QR code for payment
+        function generatePaymentQR(amount) {
+            const qrCanvas = document.getElementById('paymentQR');
+            const thermalQrCanvas = document.getElementById('thermalQR');
+            const upiId = settings.upiId;
+            const payeeName = settings.ownerName;
+            
+            // Format amount to have two decimal places
+            const formattedAmount = parseFloat(amount).toFixed(2);
+            
+            // Create UPI payment link
+            const upiLink = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(payeeName)}&am=${formattedAmount}&cu=INR`;
+            
+            // Generate new QR code
+            QRCode.toCanvas(qrCanvas, upiLink, {
+                width: 140,
+                margin: 1,
+                color: {
+                    dark: '#000000',
+                    light: '#ffffff'
+                }
+            }, function (error) {
+                if (error) console.error('QR generation error:', error);
+            });
+            
+            // Generate thermal QR code
+            QRCode.toCanvas(thermalQrCanvas, upiLink, {
+                width: 120,
+                margin: 0,
+                color: {
+                    dark: '#000000',
+                    light: '#ffffff'
+                }
+            }, function (error) {
+                if (error) console.error('Thermal QR generation error:', error);
+            });
+        }
+        
+        // Generate barcode for bill
+        function generateBarcode(billId) {
+            try {
+                JsBarcode("#billBarcode", billId.toString(), {
+                    format: "CODE128",
+                    displayValue: false,
+                    height: 50,
+                    margin: 5
+                });
+                
+                JsBarcode("#thermalBarcode", billId.toString(), {
+                    format: "CODE128",
+                    displayValue: false,
+                    height: 20,
+                    margin: 0
+                });
+            } catch(e) {
+                console.error('Barcode generation error:', e);
+            }
+        }
+        
+        // New bill button on form
+        formNewBillBtn.addEventListener('click', () => {
+            billForm.reset();
+            alert('Form has been reset. Previous readings remain unchanged.');
+        });
+        
+        // Mark bill as paid/pending
+        markPaidBtn.addEventListener('click', () => {
+            if (currentBill) {
+                // Toggle status
+                currentBill.status = currentBill.status === 'pending' ? 'paid' : 'pending';
+                
+                // Set payment date if marking as paid
+                if (currentBill.status === 'paid') {
+                    currentBill.paidDate = new Date().toISOString();
+                } else {
+                    currentBill.paidDate = null;
+                }
+                
+                // Update in bills array
+                const index = bills.findIndex(b => b.id === currentBill.id);
+                if (index !== -1) {
+                    bills[index] = currentBill;
+                    localStorage.setItem('rentBills', JSON.stringify(bills));
+                    
+                    // Update UI
+                    displayBill(currentBill);
+                    loadPreviousBills();
+                    
+                    alert(`Bill marked as ${currentBill.status}!`);
+                }
+            }
+        });
+        
+        // Thermal Print Button
+        thermalPrintBtn.addEventListener('click', () => {
+            if (!currentBill) return;
+            
+            // Populate thermal bill
+            const date = new Date(currentBill.date);
+            const options = { 
+                year: 'numeric', 
+                month: 'short', 
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            };
+            
+            document.getElementById('thermalDate').textContent = date.toLocaleDateString('en-IN', options);
+            document.getElementById('thermalStatus').textContent = currentBill.status.toUpperCase();
+            document.getElementById('thermalStatus').className = `thermal-status ${currentBill.status}`;
+            document.getElementById('thermalOwnerName').textContent = settings.ownerName;
+            document.getElementById('thermalOwnerPhone').textContent = settings.ownerPhone;
+            document.getElementById('thermalTenantName').textContent = settings.tenantName;
+            document.getElementById('thermalTenantPhone').textContent = settings.tenantPhone;
+            document.getElementById('thermalPrevElec').textContent = currentBill.prevElectricity;
+            document.getElementById('thermalCurrElec').textContent = currentBill.currElectricity;
+            document.getElementById('thermalPrevAC').textContent = currentBill.prevAC;
+            document.getElementById('thermalCurrAC').textContent = currentBill.currAC;
+            document.getElementById('thermalRent').textContent = `₹${currentBill.rent.toFixed(2)}`;
+            document.getElementById('thermalWater').textContent = `₹${currentBill.water.toFixed(2)}`;
+            document.getElementById('thermalElecCharge').textContent = `₹${currentBill.elecCharge.toFixed(2)}`;
+            document.getElementById('thermalACCharge').textContent = `₹${currentBill.acCharge.toFixed(2)}`;
+            document.getElementById('thermalTotal').textContent = `₹${currentBill.total.toFixed(2)}`;
+            document.getElementById('thermalUPI').textContent = settings.upiId;
+            
+            // Show the thermal bill element for printing
+            const thermalBill = document.getElementById('thermal-bill');
+            thermalBill.style.display = 'block';
+            
+            // Trigger print
+            setTimeout(() => {
+                window.print();
+                // Hide again after printing
+                setTimeout(() => {
+                    thermalBill.style.display = 'none';
+                }, 100);
+            }, 100);
+        });
+        
+        // Share via WhatsApp with HIGH RESOLUTION image
+        shareBtn.addEventListener('click', () => {
+            if (!currentBill) return;
+            
+            // Create loading indicator
+            shareBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating Bill...';
+            shareBtn.disabled = true;
+            
+            // Temporarily hide the status indicator for download
+            const statusElement = document.getElementById('billStatus');
+            const originalDisplay = statusElement.style.display;
+            statusElement.style.display = 'none';
+            
+            // Generate bill as image with HIGH RESOLUTION settings
+            html2canvas(document.getElementById('billPreview'), {
+                scale: 3, // Triple the resolution for high quality
+                logging: false,
+                useCORS: true,
+                backgroundColor: "#ffffff",
+                onclone: (clonedDoc) => {
+                    // Also hide in the cloned document for extra safety
+                    const clonedStatus = clonedDoc.getElementById('billStatus');
+                    if (clonedStatus) {
+                        clonedStatus.style.display = 'none';
+                    }
+                    
+                    // Ensure the preview looks good for capture
+                    const preview = clonedDoc.getElementById('billPreview');
+                    preview.style.boxShadow = 'none';
+                    preview.style.transform = 'scale(1)';
+                }
+            }).then(canvas => {
+                // Restore the status element
+                statusElement.style.display = originalDisplay;
+                
+                // Restore button state
+                shareBtn.innerHTML = '<i class="fab fa-whatsapp"></i> Share via WhatsApp';
+                shareBtn.disabled = false;
+                
+                // Convert canvas to image
+                const imgData = canvas.toDataURL('image/png');
+                
+                // Create temporary link
+                const link = document.createElement('a');
+                link.href = imgData;
+                
+                // Create filename with date and time
+                const now = new Date();
+                const dateStr = now.toISOString().slice(0, 19).replace(/[-:T]/g, '');
+                const fileName = `rent-bill-${dateStr}.png`;
+                link.download = fileName;
+                
+                // Trigger download
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                // Create WhatsApp share link
+                const text = encodeURIComponent(
+                    `Here's your rent bill for this month\n` +
+                    `Total: ₹${currentBill.total.toFixed(2)}\n` 
+                );
+                const phone = settings.tenantPhone.replace(/\D/g, ''); // Remove non-digit characters
+                const whatsappUrl = `https://wa.me/${phone}?text=${text}`;
+                
+                // Open WhatsApp after a slight delay
+                setTimeout(() => {
+                    window.open(whatsappUrl, '_blank');
+                }, 500);
+            }).catch(err => {
+                // Restore status element on error
+                statusElement.style.display = originalDisplay;
+                
+                console.error('Error generating bill image:', err);
+                shareBtn.innerHTML = '<i class="fab fa-whatsapp"></i> Share via WhatsApp';
+                shareBtn.disabled = false;
+                alert('Error generating bill image. Please try again.');
+            });
+        });
+        
+        // Delete bill
+        function deleteBill(billId) {
+            if(confirm("Are you sure you want to delete this bill?")) {
+                bills = bills.filter(bill => bill.id !== billId);
+                localStorage.setItem('rentBills', JSON.stringify(bills));
+                loadPreviousBills();
+            }
+        }
+        
+        // Edit bill
+        function editBill(bill) {
+            // Set previous readings to this bill's current readings
+            prevElectricity = bill.currElectricity;
+            prevAC = bill.currAC;
+            localStorage.setItem('previousReadings', JSON.stringify({ 
+                electricity: prevElectricity, 
+                ac: prevAC 
+            }));
+            
+            // Update UI
+            document.getElementById('prevElectricity').textContent = prevElectricity;
+            document.getElementById('prevAC').textContent = prevAC;
+            
+            // Delete the bill
+            deleteBill(bill.id);
+            
+            // Switch to new bill tab
+            tabBtns.forEach(btn => {
+                if (btn.getAttribute('data-tab') === 'newBill') {
+                    btn.click();
+                }
+            });
+            
+            // Fill form with bill data
+            document.getElementById('electricityReading').value = bill.currElectricity;
+            document.getElementById('acReading').value = bill.currAC;
+            
+            alert('Bill data loaded for editing. Please review and generate a new bill.');
+        }
+        
+        // Load previous bills
+        function loadPreviousBills() {
+            if (bills.length === 0) {
+                prevBillsList.innerHTML = `
+                    <div class="no-bills">
+                        <i class="fas fa-file-invoice"></i>
+                        <p>No bills generated yet</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            prevBillsList.innerHTML = '';
+            
+            bills.forEach(bill => {
+                const date = new Date(bill.date);
+                const formattedDate = date.toLocaleDateString('en-IN', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+                
+                const paidDate = bill.paidDate ? new Date(bill.paidDate).toLocaleDateString('en-IN') : '';
+                
+                const billCard = document.createElement('div');
+                billCard.className = 'bill-card';
+                billCard.innerHTML = `
+                    <div class="bill-card-checkbox">
+                        <input type="checkbox" class="bill-checkbox" data-id="${bill.id}">
+                    </div>
+                    <div class="bill-card-header">
+                        <div class="bill-card-date">
+                            <i class="fas fa-calendar-alt"></i> ${formattedDate}
+                        </div>
+                        <div class="bill-card-total">
+                            <i class="fas fa-rupee-sign"></i> ${bill.total.toFixed(2)}
+                        </div>
+                    </div>
+                    <div class="bill-card-details">
+                        <div class="bill-card-item">
+                            <span class="bill-card-label">
+                                <i class="fas fa-bolt"></i> Electricity
+                            </span>
+                            <span class="bill-card-value">${bill.prevElectricity} → ${bill.currElectricity}</span>
+                        </div>
+                        <div class="bill-card-item">
+                            <span class="bill-card-label">
+                                <i class="fas fa-snowflake"></i> AC
+                            </span>
+                            <span class="bill-card-value">${bill.prevAC} → ${bill.currAC}</span>
+                        </div>
+                        <div class="bill-card-item">
+                            <span class="bill-card-label">
+                                <i class="fas fa-bolt"></i> Elec Charge
+                            </span>
+                            <span class="bill-card-value">₹${bill.elecCharge.toFixed(2)}</span>
+                        </div>
+                        <div class="bill-card-item">
+                            <span class="bill-card-label">
+                                <i class="fas fa-snowflake"></i> AC Charge
+                            </span>
+                            <span class="bill-card-value">₹${bill.acCharge.toFixed(2)}</span>
+                        </div>
+                    </div>
+                    <div class="bill-card-status bill-card-${bill.status}">
+                        ${bill.status.toUpperCase()}
+                    </div>
+                    ${bill.paidDate ? `
+                        <div class="bill-card-payment-date">
+                            <i class="fas fa-calendar-check"></i> Paid on: ${paidDate}
+                        </div>
+                    ` : ''}
+                    <div class="bill-card-actions">
+                        <button class="bill-action-btn edit-btn" data-id="${bill.id}">
+                            <i class="fas fa-edit"></i> Edit
+                        </button>
+                        <button class="bill-action-btn delete-btn" data-id="${bill.id}">
+                            <i class="fas fa-trash"></i> Delete
+                        </button>
+                    </div>
+                `;
+                
+                // Add click event to view bill
+                billCard.querySelector('.bill-card-header, .bill-card-details, .bill-card-status').addEventListener('click', () => {
+                    displayBill(bill);
+                });
+                
+                // Add edit event
+                const editBtn = billCard.querySelector('.edit-btn');
+                editBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const billToEdit = bills.find(b => b.id === parseInt(editBtn.getAttribute('data-id')));
+                    if (billToEdit) editBill(billToEdit);
+                });
+                
+                // Add delete event
+                const deleteBtn = billCard.querySelector('.delete-btn');
+                deleteBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    deleteBill(parseInt(deleteBtn.getAttribute('data-id')));
+                });
+                
+                prevBillsList.appendChild(billCard);
+            });
+        }
+        
+        // Export selected bills to PDF (Improved Quality)
+        function exportBillsToPDF() {
+            // Get selected bills
+            const selectedCheckboxes = document.querySelectorAll('.bill-checkbox:checked');
+            
+            if (selectedCheckboxes.length === 0) {
+                alert('Please select at least one bill to export');
+                return;
+            }
+            
+            // Get selected bill IDs
+            const selectedIds = Array.from(selectedCheckboxes).map(checkbox => parseInt(checkbox.getAttribute('data-id')));
+            
+            // Get selected bills
+            const selectedBills = bills.filter(bill => selectedIds.includes(bill.id));
+            
+            // Show loading modal
+            pdfProgressBar.style.width = '0%';
+            pdfStatus.textContent = `Processing bill 1 of ${selectedBills.length}`;
+            pdfLoadingModal.classList.add('active');
+            
+            // Create PDF
+            const pdf = new jspdf.jsPDF('p', 'mm', 'a4');
+            let processed = 0;
+            
+            // Process each bill asynchronously
+            selectedBills.forEach((bill, index) => {
+                // Create a new page template
+                const template = document.getElementById('pdf-template').cloneNode(true);
+                template.style.display = 'block';
+                const page = template.querySelector('.pdf-page');
+                document.body.appendChild(template);
+                
+                // Populate with bill data
+                const date = new Date(bill.date);
+                const options = { 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                };
+                
+                page.innerHTML = `
+                    <div class="bill-header">
+                        <h2 class="bill-title">
+                            <i class="fas fa-file-invoice"></i> Rent & Utilities Invoice</h2>
+                        <div class="bill-date">
+                            <i class="fas fa-calendar-alt"></i> <span>${date.toLocaleDateString('en-IN', options)}</span>
+                        </div>
+                        <div class="bill-status status-${bill.status}">${bill.status.charAt(0).toUpperCase() + bill.status.slice(1)}</div>
+                    </div>
+                    
+                    <div class="bill-details">
+                        <div class="bill-section">
+                            <h3><i class="fas fa-home"></i> Owner Information</h3>
+                            <p><i class="fas fa-user"></i> <span>${settings.ownerName}</span></p>
+                            <p><i class="fas fa-phone"></i> <span>${settings.ownerPhone}</span></p>
+                        </div>
+                        
+                        <div class="bill-section">
+                            <h3><i class="fas fa-user"></i> Tenant Information</h3>
+                            <p><i class="fas fa-user"></i> <span>${settings.tenantName}</span></p>
+                            <p><i class="fas fa-phone"></i> <span>${settings.tenantPhone}</span></p>
+                        </div>
+                    </div>
+                    
+                    <div class="bill-readings">
+                        <h3><i class="fas fa-tachometer-alt" style="margin-bottom: 15px;"></i> Meter Reading Changes</h3>
+                        
+                        <div class="reading-group">
+                            <div class="reading-row">
+                                <div class="reading-type">
+                                    <i class="fas fa-bolt"></i> Electricity
+                                </div>
+                                <div class="reading-values">
+                                    <span>${bill.prevElectricity}</span>
+                                    <i class="fas fa-arrow-right"></i>
+                                    <span>${bill.currElectricity}</span>
+                                </div>
+                            </div>
+                            
+                            <div class="reading-row">
+                                <div class="reading-type">
+                                    <i class="fas fa-snowflake"></i> AC
+                                </div>
+                                <div class="reading-values">
+                                    <span>${bill.prevAC}</span>
+                                    <i class="fas fa-arrow-right"></i>
+                                    <span>${bill.currAC}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bill-charges">
+                       <h3><i class="fas fa-file-alt"></i> Bill Breakup Details</h3>
+                        <div class="bill-charge-item">
+                            <div class="bill-charge-label">
+                                <div class="bill-charge-service">
+                                    <i class="fas fa-home"></i> Rent</div>
+                            </div>
+                            <div class="bill-charge-value">₹${bill.rent.toFixed(2)}</div>
+                        </div>
+                        <div class="bill-charge-item">
+                            <div class="bill-charge-label">
+                                <div class="bill-charge-service">
+                                    <i class="fas fa-tint"></i> Water</div>
+                            </div>
+                            <div class="bill-charge-value">₹${bill.water.toFixed(2)}</div>
+                        </div>
+                        <div class="bill-charge-item">
+                            <div class="bill-charge-label">
+                                <div class="bill-charge-service">
+                                    <i class="fas fa-bolt"></i> Electricity
+                                </div>
+                                <div class="bill-charge-details">
+                                    (${bill.elecUnits} units × ₹${settings.electricityRate})
+                                </div>
+                            </div>
+                            <div class="bill-charge-value">₹${bill.elecCharge.toFixed(2)}</div>
+                        </div>
+                        <div class="bill-charge-item">
+                            <div class="bill-charge-label">
+                                <div class="bill-charge-service">
+                                    <i class="fas fa-snowflake"></i> AC
+                                </div>
+                                <div class="bill-charge-details">
+                                    (${bill.acUnits} units × ₹${settings.acRate})
+                                </div>
+                            </div>
+                            <div class="bill-charge-value">₹${bill.acCharge.toFixed(2)}</div>
+                        </div>
+                    
+                    <div class="bill-total">
+                        <span><i class="fas fa-receipt"></i> Total Amount:</span>
+                        <span>₹${bill.total.toFixed(2)}</span>
+                    </div>
+                    </div>
+                `;
+                
+                // Use html2canvas to capture the bill as image with high quality settings
+                setTimeout(() => {
+                    html2canvas(page, {
+                        scale: 2, // Increased scale for higher quality
+                        useCORS: true,
+                        logging: false,
+                        backgroundColor: "#ffffff",
+                        allowTaint: true
+                    }).then(canvas => {
+                        // Get image data (use PNG for lossless quality)
+                        const imgData = canvas.toDataURL('image/png');
+                        
+                        // Add page if not the first bill
+                        if (index > 0) {
+                            pdf.addPage();
+                        }
+                        
+                        // Add image to PDF
+                        const imgProps = pdf.getImageProperties(imgData);
+                        const pdfWidth = pdf.internal.pageSize.getWidth();
+                        const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+                        
+                        // Center the image on the page
+                        const x = (pdf.internal.pageSize.getWidth() - pdfWidth) / 2;
+                        const y = (pdf.internal.pageSize.getHeight() - pdfHeight) / 2;
+                        
+                        pdf.addImage(imgData, 'PNG', x, y, pdfWidth, pdfHeight);
+                        
+                        // Remove temporary element
+                        document.body.removeChild(template);
+                        
+                        // Update progress
+                        processed++;
+                        const progress = Math.round((processed / selectedBills.length) * 100);
+                        pdfProgressBar.style.width = `${progress}%`;
+                        pdfStatus.textContent = `Processed bill ${processed} of ${selectedBills.length}`;
+                        
+                        // If this is the last bill, save the PDF
+                        if (processed === selectedBills.length) {
+                            // Save the PDF
+                            pdf.save(`rent-bills-${new Date().toISOString().slice(0, 10)}.pdf`);
+                            
+                            // Close loading modal
+                            pdfLoadingModal.classList.remove('active');
+                        }
+                    }).catch(error => {
+                        console.error('Error generating bill image:', error);
+                        // Remove temporary element
+                        document.body.removeChild(template);
+                        
+                        // Update progress
+                        processed++;
+                        const progress = Math.round((processed / selectedBills.length) * 100);
+                        pdfProgressBar.style.width = `${progress}%`;
+                        pdfStatus.textContent = `Processed bill ${processed} of ${selectedBills.length}`;
+                        
+                        // If this is the last bill, save the PDF
+                        if (processed === selectedBills.length) {
+                            // Save the PDF
+                            pdf.save(`rent-bills-${new Date().toISOString().slice(0, 10)}.pdf`);
+                            
+                            // Close loading modal
+                            pdfLoadingModal.classList.remove('active');
+                        }
+                    });
+                }, 100); // Small delay to ensure rendering
+            });
+        }
+        
+        // Start barcode scanner
+        function startScanner() {
+            // Get camera devices
+            Instascan.Camera.getCameras().then(function(availableCameras) {
+                cameras = availableCameras;
+                if (cameras.length > 0) {
+                    currentCamera = cameras[0];
+                    
+                    scanner = new Instascan.Scanner({ 
+                        video: document.getElementById('scanner-video'),
+                        mirror: false,
+                        backgroundScan: true,
+                        scanPeriod: 5
+                    });
+                    
+                    scanner.addListener('scan', function(content) {
+                        handleBarcodeScan(content);
+                    });
+                    
+                    scanner.start(currentCamera).then(() => {
+                        document.getElementById('scannerOverlay').style.display = 'none';
+                        startScannerBtn.style.display = 'none';
+                        stopScannerBtn.style.display = 'block';
+                        toggleCameraBtn.style.display = cameras.length > 1 ? 'block' : 'none';
+                        scanResult.innerHTML = '<p>Scanning for barcodes...</p>';
+                    }).catch(e => {
+                        console.error('Scanner start error:', e);
+                        scanResult.innerHTML = `<div class="scan-error">Scanner error: ${e.message}</div>`;
+                    });
+                } else {
+                    scanResult.innerHTML = '<div class="scan-error">No cameras found. Please check your camera permissions.</div>';
+                }
+            }).catch(function(e) {
+                console.error('Camera error:', e);
+                scanResult.innerHTML = `<div class="scan-error">Camera error: ${e.message}</div>`;
+            });
+        }
+        
+        // Stop barcode scanner
+        function stopScanner() {
+            if (scanner) {
+                scanner.stop();
+                scanner = null;
+            }
+            document.getElementById('scannerOverlay').style.display = 'flex';
+            startScannerBtn.style.display = 'block';
+            stopScannerBtn.style.display = 'none';
+            toggleCameraBtn.style.display = 'none';
+            scanResult.innerHTML = '<p>Scanner stopped</p>';
+        }
+        
+        // Toggle between front and back cameras
+        function toggleCamera() {
+            if (cameras.length < 2) return;
+            
+            const currentIndex = cameras.findIndex(cam => cam.id === currentCamera.id);
+            const nextIndex = (currentIndex + 1) % cameras.length;
+            currentCamera = cameras[nextIndex];
+            
+            if (scanner) {
+                stopScanner();
+                startScanner();
+            }
+        }
+        
+        // Handle barcode scan
+        function handleBarcodeScan(content) {
+            const resultDiv = document.getElementById('scan-result');
+            
+            try {
+                // Parse scanned content (should be bill ID)
+                const billId = parseInt(content);
+                
+                // Find bill in storage
+                const bill = bills.find(b => b.id === billId);
+                
+                if (bill) {
+                    // Update bill status to paid
+                    bill.status = 'paid';
+                    bill.paidDate = new Date().toISOString();
+                    
+                    // Save to localStorage
+                    localStorage.setItem('rentBills', JSON.stringify(bills));
+                    
+                    // Show success message
+                    resultDiv.innerHTML = `
+                        <div class="scan-success">
+                            <i class="fas fa-check-circle"></i> Bill Paid Successfully!
+                        </div>
+                        <div style="margin-top: 15px;">
+                            <p><strong>Bill ID:</strong> ${bill.id}</p>
+                            <p><strong>Date:</strong> ${new Date(bill.date).toLocaleDateString()}</p>
+                            <p><strong>Amount:</strong> ₹${bill.total.toFixed(2)}</p>
+                        </div>
+                    `;
+                    
+                    // Reload previous bills list
+                    loadPreviousBills();
+                    
+                    // Play success sound
+                    playBeepSound();
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="scan-error">
+                            <i class="fas fa-exclamation-triangle"></i> Bill Not Found!
+                        </div>
+                        <p style="margin-top: 15px;">No bill found with ID: ${billId}</p>
+                    `;
+                }
+            } catch (e) {
+                resultDiv.innerHTML = `
+                    <div class="scan-error">
+                        <i class="fas fa-exclamation-triangle"></i> Invalid Barcode!
+                    </div>
+                    <p style="margin-top: 15px;">Scanned content: ${content}</p>
+                `;
+            }
+        }
+        
+        // Play beep sound for scan confirmation
+        function playBeepSound() {
+            const context = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = context.createOscillator();
+            const gainNode = context.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(context.destination);
+            
+            oscillator.type = 'sine';
+            oscillator.frequency.value = 800;
+            gainNode.gain.value = 0.3;
+            
+            oscillator.start();
+            setTimeout(() => {
+                oscillator.stop();
+            }, 200);
+        }
+    </script>
+</body>
+</html>
